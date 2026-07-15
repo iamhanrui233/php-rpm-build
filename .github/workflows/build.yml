@@ -37,18 +37,12 @@ jobs:
     - name: Create package
       run: |
         cd php-src
-        make install DESTDIR=/tmp/php-install
+        make install INSTALL_ROOT=/tmp/php-install
         cd /tmp/php-install
         tar czf $GITHUB_WORKSPACE/php-7.4.30-rocky8-x86_64.tar.gz opt
-        
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: php-7.4.30-rocky8
-        path: php-7.4.30-rocky8-x86_64.tar.gz
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: php-7.4.30-rocky8
-        path: php-src/php-7.4.30-rocky8-x86_64.tar.gz
+        path: php-7.4.30-rocky8-x86_64.tar.gz
