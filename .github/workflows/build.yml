@@ -8,14 +8,17 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: rockylinux:8
+    container: centos:7
 
     steps:
+    - name: Fix CentOS 7 repos (EOL)
+      run: |
+        sed -i 's|^mirrorlist=|#mirrorlist=|g' /etc/yum.repos.d/CentOS-*.repo
+        sed -i 's|^#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-*.repo
     - name: Install dependencies
       run: |
-        dnf install -y epel-release
-        dnf config-manager --set-enabled powertools
-        dnf install -y git make gcc gcc-c++ autoconf libtool bison re2c automake \
+         yum install -y epel-release
+         yum install -y git make gcc gcc-c++ autoconf libtool bison re2c automake \
           libxml2-devel openssl-devel sqlite-devel libcurl-devel libzip-devel \
           oniguruma-devel readline-devel rpm-build tar gzip
 
@@ -39,10 +42,10 @@ jobs:
         cd php-src
         make install INSTALL_ROOT=/tmp/php-install
         cd /tmp/php-install
-        tar czf $GITHUB_WORKSPACE/php-7.4.30-rocky8-x86_64.tar.gz opt
+        tar czf $GITHUB_WORKSPACE/php-7.4.30-centos7-x86_64.tar.gz opt
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: php-7.4.30-rocky8
-        path: php-7.4.30-rocky8-x86_64.tar.gz
+        name: php-7.4.30-centos7
+        path: php-7.4.30-centos7-x86_64.tar.gz
