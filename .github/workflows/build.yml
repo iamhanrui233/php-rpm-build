@@ -1,7 +1,4 @@
-name: Build PHP RPM
-
-env:
-  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
+name: Build PHP RPM for CentOS 7
 
 on:
   push:
@@ -11,53 +8,47 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: centos:7
 
     steps:
-    - name: Fix CentOS 7 repos (EOL)
+    - name: Build PHP in CentOS 7 container
       run: |
-        sed -i 's|^mirrorlist=|#mirrorlist=|g' /etc/yum.repos.d/CentOS-*.repo
-        sed -i 's|^#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-*.repo
-
-    - name: Install dependencies
-      run: |
+        docker run --rm -v $PWD:/output centos:7 bash -c '
+        set -e
+        
+        # Fix CentOS 7 repos (EOL)
+        sed -i "s|^mirrorlist=|#mirrorlist=|g" /etc/yum.repos.d/CentOS-*.repo
+        sed -i "s|^#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g" /etc/yum.repos.d/CentOS-*.repo
+        
+        # Install dependencies
         yum install -y epel-release
         yum install -y git make gcc gcc-c++ autoconf libtool bison re2c automake \
           libxml2-devel openssl-devel sqlite-devel libcurl-devel libzip-devel \
-          oniguruma-devel readline-devel rpm-build tar gzip
-
-    - name: Checkout PHP source
-      uses: actions/checkout@v4
-      with:
-        repository: php/php-src
-        ref: php-7.4.30
-        fetch-depth: 1
-        path: php-src
-
-    - name: Build PHP
-      run: |
-        cd php-src
+          oniguruma-devel readline-devel rpm-build tar gzip wget
+        
+        # Download PHP source
+        cd /tmp
+        wget https://www.php.net/distributions/php-7.4.30.tar.gz
+        tar xzf php-7.4.30.tar.gz
+        cd php-7.4.30
+        
+        # Build PHP
         ./buildconf --force
         ./configure --prefix=/opt/php74 --with-openssl --enable-mbstring --with-curl --with-zlib
         make -j $(nproc)
-
-    - name: Build RPM package
-      run: |
+        
+        # Build RPM
         mkdir -p ~/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
         
-        # Create tarball from php-src directory
-        cd $GITHUB_WORKSPACE
-        mv php-src php-7.4.30
+        cd /tmp
         tar czf ~/rpmbuild/SOURCES/php-7.4.30.tar.gz php-7.4.30
         
-        # Create spec file
-        cat > ~/rpmbuild/SPECS/php.spec << 'EOF'
+        cat > ~/rpmbuild/SPECS/php.spec << '\''EOF'\''
         Name: php74-custom
         Version: 7.4.30
-        Release: 1%{?dist}
+        Release: 1.el7
         Summary: PHP scripting language
         License: PHP
-        Source0: %{name}-%{version}.tar.gz
+        Source0: php-%{version}.tar.gz
         
         %description
         PHP is a popular general-purpose scripting language.
@@ -79,14 +70,13 @@ jobs:
         EOF
         
         rpmbuild -bb ~/rpmbuild/SPECS/php.spec
-
-    - name: Prepare artifacts
-      run: |
-        mkdir -p artifacts
-        cp ~/rpmbuild/RPMS/x86_64/*.rpm artifacts/ || cp ~/rpmbuild/RPMS/*/*.rpm artifacts/
+        
+        # Copy RPMs to output
+        cp ~/rpmbuild/RPMS/x86_64/*.rpm /output/ || cp ~/rpmbuild/RPMS/*/*.rpm /output/
+        '
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: php-7.4.30-centos7-rpm
-        path: artifacts/*.rpm
+        path: "*.rpm"
