@@ -13,6 +13,8 @@ jobs:
     steps:
     - name: Install dependencies
       run: |
+        dnf install -y epel-release
+        dnf config-manager --set-enabled powertools
         dnf install -y git make gcc gcc-c++ autoconf libtool bison re2c automake \
           libxml2-devel openssl-devel sqlite-devel libcurl-devel libzip-devel \
           oniguruma-devel readline-devel rpm-build tar gzip
