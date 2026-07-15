@@ -1,0 +1,46 @@
+name: Build PHP RPM
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: rockylinux:8
+
+    steps:
+    - name: Install dependencies
+      run: |
+        dnf install -y git make gcc gcc-c++ autoconf libtool bison re2c automake \
+          libxml2-devel openssl-devel sqlite-devel libcurl-devel libzip-devel \
+          oniguruma-devel readline-devel rpm-build tar gzip
+
+    - name: Checkout PHP source
+      uses: actions/checkout@v4
+      with:
+        repository: php/php-src
+        ref: php-7.4.30
+        fetch-depth: 1
+        path: php-src
+
+    - name: Build PHP
+      run: |
+        cd php-src
+        ./buildconf --force
+        ./configure --prefix=/opt/php --with-openssl --enable-mbstring --with-curl --with-zlib
+        make -j $(nproc)
+
+    - name: Create package
+      run: |
+        cd php-src
+        make install DESTDIR=$PWD/install
+        cd install
+        tar czf ../php-7.4.30-rocky8-x86_64.tar.gz opt
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: php-7.4.30-rocky8
+        path: php-src/php-7.4.30-rocky8-x86_64.tar.gz
