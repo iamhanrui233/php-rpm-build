@@ -97,4 +97,31 @@ jobs:
         # Create install script
         cat > install.sh << '\''INSTALL_EOF'\''
         #!/bin/bash
-        # Offlin
+        # Offline PHP 7.4.30 Installation Script for CentOS 7
+        
+        echo "Installing dependencies..."
+        rpm -Uvh --nodeps *.rpm --force 2>/dev/null || true
+        
+        echo "Installing PHP..."
+        rpm -Uvh php74-custom-7.4.30-1.el7.x86_64.rpm
+        
+        echo ""
+        echo "Installation complete!"
+        echo "PHP installed to: /opt/php74"
+        echo "Run: /opt/php74/bin/php -v"
+        INSTALL_EOF
+        
+        chmod +x install.sh
+        
+        # Package everything
+        tar czf /output/php-7.4.30-offline-centos7.tar.gz *
+        
+        echo "Offline package created: php-7.4.30-offline-centos7.tar.gz"
+        ls -lh /output/
+        '
+
+    - name: Upload offline package
+      uses: actions/upload-artifact@v4
+      with:
+        name: php-7.4.30-offline-centos7
+        path: php-7.4.30-offline-centos7.tar.gz
