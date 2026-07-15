@@ -1,4 +1,4 @@
-name: Build PHP RPM for CentOS 7
+name: Build PHP RPM for CentOS 7 (Offline)
 
 on:
   push:
@@ -23,7 +23,8 @@ jobs:
         yum install -y epel-release
         yum install -y git make gcc gcc-c++ autoconf libtool bison re2c automake \
           libxml2-devel openssl-devel sqlite-devel libcurl-devel libzip-devel \
-          oniguruma-devel readline-devel rpm-build tar gzip wget
+          oniguruma-devel readline-devel rpm-build tar gzip wget \
+          yum-utils
         
         # Download PHP source
         cd /tmp
@@ -77,12 +78,23 @@ jobs:
         
         rpmbuild -bb ~/rpmbuild/SPECS/php.spec
         
-        # Copy RPMs to output
-        cp ~/rpmbuild/RPMS/x86_64/*.rpm /output/ || cp ~/rpmbuild/RPMS/*/*.rpm /output/
-        '
-
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: php-7.4.30-centos7-rpm
-        path: "*.rpm"
+        # Download all runtime dependencies for offline install
+        mkdir -p /tmp/offline-pkg
+        
+        echo "Downloading runtime dependencies..."
+        
+        # Core libraries that PHP depends on
+        yum install -y --downloadonly --downloaddir=/tmp/offline-pkg \
+          openssl-libs libcurl libxml2 zlib sqlite libzip oniguruma \
+          libicu libstdc++ libgcc 2>/dev/null || true
+        
+        # Copy PHP RPM to offline package directory
+        cp ~/rpmbuild/RPMS/x86_64/*.rpm /tmp/offline-pkg/
+        
+        # Create offline installation package
+        cd /tmp/offline-pkg
+        
+        # Create install script
+        cat > install.sh << '\''INSTALL_EOF'\''
+        #!/bin/bash
+        # Offlin
