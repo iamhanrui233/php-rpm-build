@@ -49,6 +49,7 @@ jobs:
         Summary: PHP scripting language
         License: PHP
         Source0: php-%{version}.tar.gz
+        BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
         
         %description
         PHP is a popular general-purpose scripting language.
@@ -62,11 +63,16 @@ jobs:
         
         %install
         rm -rf %{buildroot}
-        make install DESTDIR=%{buildroot}
+        mkdir -p %{buildroot}/opt
+        make install INSTALL_ROOT=%{buildroot}
+        find %{buildroot} -type d -exec chmod 755 {} \;
         
         %files
         %defattr(-,root,root,-)
         /opt/php74
+        
+        %clean
+        rm -rf %{buildroot}
         EOF
         
         rpmbuild -bb ~/rpmbuild/SPECS/php.spec
